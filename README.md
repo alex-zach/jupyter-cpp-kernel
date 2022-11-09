@@ -2,6 +2,8 @@
 
 This project was forked from [https://github.com/XaverKlemenschits/jupyter-c-kernel](XaverKlemenschits/jupyter-c-kernel) with the goal to implement a simple C++ kernel, that uses `g++` and compiles the code, instead of using the `cling`-Interpreter that is used in other C++ kernels.
 
+## Problems
+* `stdio`-Wrapper causes compilation error for `c++98` and `c++03`.
 # FORKED CONTENT:
 
 # C kernel for Jupyter

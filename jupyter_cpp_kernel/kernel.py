@@ -85,16 +85,16 @@ class RealTimeSubprocess(subprocess.Popen):
                 self._write_to_stdout(contents)
 
 
-class CKernel(Kernel):
-    implementation = 'jupyter_c_kernel'
+class CPPKernel(Kernel):
+    implementation = 'jupyter_cpp_kernel'
     implementation_version = '1.0'
-    language = 'c'
-    language_version = 'C11'
+    language = 'C++'
+    language_version = 'C++17'
     language_info = {'name': 'text/x-csrc',
                      'mimetype': 'text/x-csrc',
-                     'file_extension': '.c'}
-    banner = "C kernel.\n" \
-             "Uses gcc, compiles in C11, and creates source code files and executables in temporary folder.\n"
+                     'file_extension': '.cpp'}
+    banner = "C++ kernel.\n" \
+             "Uses g++, compiles in C++17, and creates source code files and executables in temporary folder.\n"
 
     main_head = "#include <stdio.h>\n" \
             "#include <math.h>\n" \
@@ -103,14 +103,14 @@ class CKernel(Kernel):
     main_foot = "\nreturn 0;\n}"
 
     def __init__(self, *args, **kwargs):
-        super(CKernel, self).__init__(*args, **kwargs)
+        super(CPPKernel, self).__init__(*args, **kwargs)
         self._allow_stdin = True
         self.readOnlyFileSystem = False
         self.bufferedOutput = True
         self.linkMaths = True # always link math library
         self.wAll = True # show all warnings by default
         self.wError = False # but keep comipiling for warnings
-        self.standard = "c11" # default standard if none is specified
+        self.standard = "c++17" # default standard if none is specified
         self.files = []
         mastertemp = tempfile.mkstemp(suffix='.out')
         os.close(mastertemp[0])
@@ -152,7 +152,7 @@ class CKernel(Kernel):
                                   self._write_to_stderr,
                                   self._read_from_stdin)
 
-    def compile_with_gcc(self, source_filename, binary_filename, cflags=None, ldflags=None):
+    def compile_with_gplusplus(self, source_filename, binary_filename, cflags=None, ldflags=None):
         cflags = ['-pedantic', '-fPIC', '-shared', '-rdynamic'] + cflags
         if self.linkMaths:
             cflags = cflags + ['-lm']
@@ -164,7 +164,7 @@ class CKernel(Kernel):
             cflags = ['-DREAD_ONLY_FILE_SYSTEM'] + cflags
         if self.bufferedOutput:
             cflags = ['-DBUFFERED_OUTPUT'] + cflags
-        args = ['gcc', source_filename] + cflags + ['-o', binary_filename] + ldflags
+        args = ['g++', source_filename] + cflags + ['-o', binary_filename] + ldflags
         return self.create_jupyter_subprocess(args)
 
     def _filter_magics(self, code):
@@ -179,7 +179,7 @@ class CKernel(Kernel):
             if line.startswith('//%'):
                 magicSplit = line[3:].split(":", 2)
                 if(len(magicSplit) < 2):
-                    self._write_to_stderr("[C kernel] Magic line starting with '//%' is missing a semicolon, ignoring.")
+                    self._write_to_stderr("[C++ kernel] Magic line starting with '//%' is missing a semicolon, ignoring.")
                     continue
 
                 key, value = magicSplit
@@ -232,18 +232,25 @@ class CKernel(Kernel):
         headerDir = "\"" + self.resDir + "/stdio_wrap.h" + "\""
         code = code.replace("<stdio.h>", headerDir)
         code = code.replace("\"stdio.h\"", headerDir)
+        code = code.replace("<cstdio>", headerDir)
 
-        with self.new_temp_file(suffix='.c') as source_file:
+        self._write_to_stdout("{}\n\n".format(
+            "\n".join(
+                map(
+                    lambda line: "[C++ kernel][debug] {}".format(line), 
+                    (["magics {}".format(magics), "processed code:"] + code.splitlines())))))
+
+        with self.new_temp_file(suffix='.cpp') as source_file:
             source_file.write(code)
             source_file.flush()
             with self.new_temp_file(suffix='.out') as binary_file:
-                p = self.compile_with_gcc(source_file.name, binary_file.name, magics['cflags'], magics['ldflags'])
+                p = self.compile_with_gplusplus(source_file.name, binary_file.name, magics['cflags'], magics['ldflags'])
                 while p.poll() is None:
                     p.write_contents()
                 p.write_contents()
                 if p.returncode != 0:  # Compilation failed
                     self._write_to_stderr(
-                            "[C kernel] GCC exited with code {}, the executable will not be executed".format(
+                            "[C++ kernel] g++ exited with code {}, the executable will not be executed".format(
                                     p.returncode))
 
                     # delete source files before exit
@@ -268,7 +275,7 @@ class CKernel(Kernel):
         os.remove(binary_file.name)
 
         if p.returncode != 0:
-            self._write_to_stderr("[C kernel] Executable exited with code {}".format(p.returncode))
+            self._write_to_stderr("[C++ kernel] Executable exited with code {}".format(p.returncode))
         return {'status': 'ok', 'execution_count': self.execution_count, 'payload': [], 'user_expressions': {}}
 
     def do_shutdown(self, restart):

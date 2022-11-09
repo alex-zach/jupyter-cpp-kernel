@@ -1,23 +1,16 @@
 #ifndef STDIO_WRAP_H
 #define STDIO_WRAP_H
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
+#include <cstdio>
+#include <cstdarg>
+#include <cstring>
+#include <cstdlib>
+#include <cctype>
 
-/* Figure out used C standard.
-  __STDC_VERSION__ is not always defined until C99.
-  If it is not defined, set standard to C89.
-  It is safest to set it by hand, to make sure */
-#ifdef __STDC_VERSION__
-#if __STDC_VERSION__ <= 199409L
-#define C89_SUPPORT
-#endif /* __STDC_VERSION__ <= 199409L */
-#else /* __STDC_VERSION__ */
-#define C89_SUPPORT
-#endif /* __STDC_VERSION__ */
+/* Figure out used C++ standard. */
+#if __cplusplus <= 199711L
+#define CPP98_SUPPORT
+#endif /* __cplusplus <= 199711L */
 
 /* output functions to replicate terminal behaviour */
 #ifdef BUFFERED_OUTPUT
@@ -50,7 +43,7 @@ void flush_until_newline() {
   long length = strlen(outputBuff);
   for(; i < length; ++i) {
     if(outputBuff[i] == '\n') {
-      char *printBuff = malloc(i+2);
+      char *printBuff = (char *)malloc(i+2);
       strncpy(printBuff, outputBuff, i+1);
       printBuff[i+1] = '\0';
       printf("%s", printBuff);
@@ -145,8 +138,8 @@ char checkInputRequest() {
 
 /* Define the input functions to overload the old ones */
 /* Wrapping of scanf depends on standard */
-#ifdef C89_SUPPORT
-/* Need to define vscanf for c89.
+#ifdef CPP98_SUPPORT
+/* Need to define vscanf for c++98.
   TODO: This is a bit risky, since the underlying glibc does not
   have to include this if it is old. If it does not, linking will fail.
   The robust way would be readin via sscanf. */
@@ -163,7 +156,7 @@ char checkInputRequest() {
   long find_scanf_length(const char *format) {
     const long length = strlen(format);
     /* allow for maximum of 50 format specifiers */
-    char *formatString = malloc(length + 53);
+    char *formatString = (char *)malloc(length + 53);
     long index = 0;
     long formatIndex = 0;
     for(; index < length; ++index, ++formatIndex) {
@@ -187,7 +180,7 @@ char checkInputRequest() {
       return readLength;
     }
   }
-#endif /* C89_SUPPORT */
+#endif /* CPP98_SUPPORT */
 
 int scanf_wrap(const char *format, ...) {
   char doRequest = checkInputRequest();
@@ -206,17 +199,17 @@ int scanf_wrap(const char *format, ...) {
   /* add %n to format string to get number of written chars */
   {
     const long length = strlen(format);
-    formatString = malloc(length + 3);
+    formatString = (char *)malloc(length + 3);
     strcpy(formatString, format);
-#ifndef C89_SUPPORT
+#ifndef CPP98_SUPPORT
     formatString[length] = '%';
     formatString[length + 1] = 'n';
     formatString[length + 2] = '\0';
-#else /* C89_SUPPORT */
+#else /* CPP98_SUPPORT */
     formatString[length] = '\0';
-    /* In C89 we need to find how far scanf will read, by hand */
+    /* In c++98 we need to find how far scanf will read, by hand */
     scanf_wrap_number_read = find_scanf_length(format);
-#endif /* C89_SUPPORT */
+#endif /* CPP98_SUPPORT */
   }
 
   {
@@ -274,14 +267,14 @@ int getchar_wrap(){
 
 /* Replace all the necessary input functions
   depending on the language version used */
-#ifndef C89_SUPPORT
+#ifndef CPP98_SUPPORT
 /* Need double hashes in case there are no __VA_ARGS__*/
 #define scanf(format, ...) scanf_wrap(format, ##__VA_ARGS__, &scanf_wrap_number_read)
-#else /* C89_SUPPORT */
-/* Since there are no variadic macros in C89, this is the only way
+#else /* CPP98_SUPPORT */
+/* Since there are no variadic macros in c++98, this is the only way
   although it is horrible */
 #define scanf scanf_wrap
-#endif /* C89_SUPPORT */
+#endif /* CPP98_SUPPORT */
 
 #define getchar() getchar_wrap()
 
