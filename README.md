@@ -1,3 +1,9 @@
+# C++ kernel for Jupyter
+
+This project was forked from [https://github.com/XaverKlemenschits/jupyter-c-kernel](XaverKlemenschits/jupyter-c-kernel) with the goal to implement a simple C++ kernel, that uses `g++` and compiles the code, instead of using the `cling`-Interpreter that is used in other C++ kernels.
+
+# FORKED CONTENT:
+
 # C kernel for Jupyter
 
 This project was forked from [https://github.com/brendan-rius/jupyter-c-kernel](brendan-rius/jupyter-c-kernel) as that project seems to have been abandoned. (PR is pending)
