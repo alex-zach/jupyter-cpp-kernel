@@ -234,6 +234,10 @@ class CPPKernel(Kernel):
         code = code.replace("\"stdio.h\"", headerDir)
         code = code.replace("<cstdio>", headerDir)
 
+        # replace iostream with wrapped version
+        iostreamHeaderDir = "\"" + self.resDir + "/iostream_wrap.h" + "\""
+        code = code.replace("<iostream>", iostreamHeaderDir)
+
         self._write_to_stdout("{}\n\n".format(
             "\n".join(
                 map(
